@@ -1,0 +1,102 @@
+#define F_CPU 8000000UL
+#include <avr/io.h>
+#include <avr/delay.h>
+
+ 
+void InitADC()
+{
+	
+	ADMUX=(1<<REFS0); //reference vltg
+	ADCSRA=(1<<ADEN)|(1<<ADPS0)|(1<<ADPS1)|(1<<ADPS2);//prescaler selection ,enable 
+	
+}
+
+uint16_t ReadADC(uint8_t ch)
+{
+	ch=ch&0x07;
+	ADMUX|=ch;
+	ADCSRA|=(1<<ADSC);   //start conversion
+	while(!(ADCSRA&(1<<ADIF)));
+	ADCSRA|=(1<<ADIF);
+	
+	return(ADC);
+	
+}
+void USART_Init()
+{
+	
+	UBRRL= 0x33;
+	UCSRB = (1<<RXEN)|(1<<TXEN)|(1<<RXCIE);
+	UCSRC = (3<<UCSZ0)|(1<<URSEL);
+	
+}
+
+void USART_Transmit( unsigned char data )
+{
+	UDR=data;
+	while(!(UCSRA & (1<<TXC)));
+	_delay_ms(100);
+}
+
+void Tx_String( char *str)
+{
+	while(*str)
+	{
+		USART_Transmit(*str);
+		str++;
+	}
+	
+}
+void uart_val(int val,unsigned int field_length)
+{
+    char str[5]={0,0,0,0,0};
+	int i=4,j=0;
+	while(val)
+	{
+	str[i]=val%10;
+	val=val/10;
+	i--;
+	}
+	if(field_length==-1)
+		while(str[j]==0) j++;
+	else
+		j=5-field_length;
+
+	if(val<0) USART_Transmit('-');
+	for(i=j;i<5;i++)
+	{
+	USART_Transmit(48+str[i]);
+	}
+}
+
+void main()
+{
+  unsigned int t1=0; 
+   DDRB=0xff;
+   DDRC=0xF0;
+   DDRD=0XFF;
+ USART_Init();
+  InitADC();
+  
+  _delay_ms(3000);
+   while(1)
+    { 	
+		
+	t1=ReadADC(0);
+	t1=t1/2-1;
+	uart_val(t1,3);
+	USART_Transmit('\r');
+	if(t1>550)
+	{
+		PORTB=0xf0;
+	}
+	else
+	{
+		PORTB=0x0F;
+	}
+	
+	
+				
+     }
+}
+
